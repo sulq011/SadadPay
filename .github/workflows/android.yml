@@ -1,0 +1,48 @@
+name: Build SadadPay APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK components
+        run: |
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SDKM" ] || SDKM="$ANDROID_HOME/cmdline-tools/bin/sdkmanager"
+          echo "using sdkmanager: $SDKM"
+          yes | "$SDKM" "platforms;android-33" "build-tools;34.0.0" > /dev/null
+          ls "$ANDROID_HOME/platforms" "$ANDROID_HOME/build-tools"
+
+      - name: Build APK
+        run: bash build.sh
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SadadPay-apk
+          path: SadadPay.apk
+
+      - name: Release APK
+        uses: softprops/action-gh-release@v1
+        with:
+          files: SadadPay.apk
+          tag_name: build-${{ github.run_number }}
+          name: "SadadPay build ${{ github.run_number }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
